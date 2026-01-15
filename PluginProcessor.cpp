@@ -1,6 +1,58 @@
 #include "PluginProcessor.h"
 #include "PluginEditor.h"
 
+
+/// (0, 1)
+float sin7(float x) {
+    // 7 multiplies + 7 addition/subtraction
+    // 14 operations
+    return x * (x * (x * (x * (x * (x * (66.5723768716453 * x - 233.003319050759) + 275.754490892928) - 106.877929605423) + 0.156842000875713) - 9.85899292126983) + 7.25653181200263) - 8.88178419700125e-16;
+}
+
+// functor class
+class Phasor {
+  float frequency_; // normalized frequency
+  float offset_;
+  float phase_;
+
+ public:
+  Phasor(float hertz, float sampleRate, float offset = 0)
+      : frequency_(hertz / sampleRate), offset_(offset), phase_(0) {}
+
+      // overload the "call" operator
+  float operator()() {
+    return process();
+  }
+
+  void frequency(float hertz, float sampleRate) {
+    frequency_ = hertz / sampleRate;
+  }
+
+  float process() {
+    // wrap
+    if (phase_ >= 1.0f) {
+      phase_ -= 1.0f;
+    }
+    float output = phase_ + offset_;
+    if (output >= 1.0f) {
+      output -= 1.0f;
+    }
+
+    phase_ += frequency_; // "side effect" // changes internal state
+    return output;
+  }
+};
+
+
+
+Phasor phasor(440.0f, 44100.0f);
+
+
+
+
+
+
+
 //==============================================================================
 AudioPluginAudioProcessor::AudioPluginAudioProcessor()
      : AudioProcessor (BusesProperties()
@@ -145,17 +197,20 @@ void AudioPluginAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer,
     // the samples and the outer loop is handling the channels.
     // Alternatively, you can process the samples with the channels
     // interleaved by keeping the same state.
+
+    float b[buffer.getNumSamples()]; // allocate array
+    for (int sample = 0; sample < buffer.getNumSamples(); ++sample) {
+        b[sample] = sin7(phasor());
+    }
+
     for (int channel = 0; channel < totalNumInputChannels; ++channel)
     {
         auto* channelData = buffer.getWritePointer (channel);
         juce::ignoreUnused (channelData);
-        // ..do something to the data...
-        for (int sample = 0; sample < buffer.getNumSamples(); ++sample)
-        {
-            // Example: simple gain reduction
-            channelData[sample] = 0;
+
+        for (int sample = 0; sample < buffer.getNumSamples(); ++sample) {
+            channelData[sample] = b[sample];
         }
-        channelData[0] = 1;
     }
 }
 
