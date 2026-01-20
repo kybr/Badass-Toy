@@ -1,6 +1,8 @@
 #include "PluginProcessor.h"
 #include "PluginEditor.h"
 
+namespace ky {
+
 inline float map(float value, float low, float high, float Low, float High) {
   return Low + (High - Low) * ((value - low) / (high - low));
 }
@@ -74,9 +76,9 @@ class Phasor {
   }
 };
 
+} // namespace ky
 
-
-Phasor phasor(440.0f, 44100.0f);
+ky::Phasor phasor(440.0f, 44100.0f);
 
 
 
@@ -246,14 +248,14 @@ void AudioPluginAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer,
     float f = apvts.getParameter("freq")->getValue();
     
     // 0.0 to 1.0
-    g = dbtoa(map(g, 0.0f, 1.0f, -60.0f, 0.0f)); // -60 dB to 0 dB
-    f = mtof(map(f, 0.0f, 1.0f, 36.0f, 96.0f)); // MIDI 36 to 96
+    g = ky::dbtoa(ky::map(g, 0.0f, 1.0f, -60.0f, 0.0f)); // -60 dB to 0 dB
+    f = ky::mtof(ky::map(f, 0.0f, 1.0f, 36.0f, 96.0f)); // MIDI 36 to 96
 
     phasor.frequency(f, getSampleRate());
 
     float b[buffer.getNumSamples()]; // allocate array
     for (int sample = 0; sample < buffer.getNumSamples(); ++sample) {
-        b[sample] = sin7(phasor()) * g;
+        b[sample] = ky::sin7(phasor()) * g;
     }
 
     for (int channel = 0; channel < totalNumInputChannels; ++channel)
