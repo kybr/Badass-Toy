@@ -69,6 +69,7 @@ juce_add_plugin(plugin
 
 target_sources(plugin
     PRIVATE
+        ky.cpp
         PluginEditor.cpp
         PluginProcessor.cpp)
 
