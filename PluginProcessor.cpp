@@ -1,6 +1,37 @@
 #include "PluginProcessor.h"
 #include "PluginEditor.h"
 
+inline float map(float value, float low, float high, float Low, float High) {
+  return Low + (High - Low) * ((value - low) / (high - low));
+}
+inline float lerp(float a, float b, float t) { return (1.0f - t) * a + t * b; }
+inline float mtof(float m) { return 8.175799f * powf(2.0f, m / 12.0f); }
+inline float ftom(float f) { return 12.0f * log2f(f / 8.175799f); }
+inline float dbtoa(float db) { return 1.0f * powf(10.0f, db / 20.0f); }
+inline float atodb(float a) { return 20.0f * log10f(a / 1.0f); }
+inline float sigmoid(float x) { return 2.0f / (1.0f + expf(-x)) - 1.0f; }
+// XXX softclip, etc.
+
+template <typename F>
+inline F wrap(F value, F high = 1, F low = 0) {
+  jassert(high > low);
+  if (value >= high) {
+    F range = high - low;
+    value -= range;
+    if (value >= high) {
+      // less common case; must use division
+      value -= (F)(unsigned)((value - low) / range);
+    }
+  } else if (value < low) {
+    F range = high - low;
+    value += range;
+    if (value < low) {
+      // less common case; must use division
+      value += (F)(unsigned)((high - value) / range);
+    }
+  }
+  return value;
+}
 
 /// (0, 1)
 float sin7(float x) {
@@ -50,7 +81,14 @@ Phasor phasor(440.0f, 44100.0f);
 
 
 
+juce::AudioProcessorValueTreeState::ParameterLayout parameters() {
+  std::vector<std::unique_ptr<juce::RangedAudioParameter>> parameter_list;
 
+  parameter_list.push_back(std::make_unique<juce::AudioParameterFloat>(
+      juce::ParameterID{"gain", 1}, "Gain", -60.0, 0.0, -60.0));
+
+  return {parameter_list.begin(), parameter_list.end()};
+}
 
 
 //==============================================================================
@@ -63,6 +101,7 @@ AudioPluginAudioProcessor::AudioPluginAudioProcessor()
                        .withOutput ("Output", juce::AudioChannelSet::stereo(), true)
                      #endif
                        )
+                     , apvts(*this, nullptr, "Parameters", parameters())
 {
 }
 
@@ -198,9 +237,16 @@ void AudioPluginAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer,
     // Alternatively, you can process the samples with the channels
     // interleaved by keeping the same state.
 
+
+    // XXX not thread-safe; should cache the atomic float and only call load in the audio thread
+    float g = apvts.getParameter("gain")->getValue();
+    
+    // 0.0 to 1.0
+    g = dbtoa(map(g, 0.0f, 1.0f, -60.0f, 0.0f)); // -60 dB to 0 dB
+
     float b[buffer.getNumSamples()]; // allocate array
     for (int sample = 0; sample < buffer.getNumSamples(); ++sample) {
-        b[sample] = sin7(phasor());
+        b[sample] = sin7(phasor()) * g;
     }
 
     for (int channel = 0; channel < totalNumInputChannels; ++channel)
@@ -231,14 +277,19 @@ void AudioPluginAudioProcessor::getStateInformation (juce::MemoryBlock& destData
     // You should use this method to store your parameters in the memory block.
     // You could do that either as raw data, or use the XML or ValueTree classes
     // as intermediaries to make it easy to save and load complex data.
-    juce::ignoreUnused (destData);
+  auto state = apvts.copyState();
+  std::unique_ptr<juce::XmlElement> xml(state.createXml());
+  copyXmlToBinary(*xml, destData);
 }
 
 void AudioPluginAudioProcessor::setStateInformation (const void* data, int sizeInBytes)
 {
     // You should use this method to restore your parameters from this memory block,
     // whose contents will have been created by the getStateInformation() call.
-    juce::ignoreUnused (data, sizeInBytes);
+  std::unique_ptr<juce::XmlElement> xmlState(getXmlFromBinary(data, sizeInBytes));
+  if (xmlState.get() != nullptr)
+    if (xmlState->hasTagName(apvts.state.getType()))
+      apvts.replaceState(juce::ValueTree::fromXml(*xmlState));
 }
 
 //==============================================================================

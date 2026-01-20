@@ -9,6 +9,12 @@ AudioPluginAudioProcessorEditor::AudioPluginAudioProcessorEditor (AudioPluginAud
     // Make sure that before the constructor has finished, you've set the
     // editor's size to whatever you need it to be.
     setSize (400, 300);
+
+     attachment.push_back(
+      std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(
+          processorRef.apvts, "gain", gainSlider));
+    
+           addAndMakeVisible(gainSlider);
 }
 
 AudioPluginAudioProcessorEditor::~AudioPluginAudioProcessorEditor()
@@ -30,4 +36,8 @@ void AudioPluginAudioProcessorEditor::resized()
 {
     // This is generally where you'll want to lay out the positions of any
     // subcomponents in your editor..
+
+  auto area = getLocalBounds();
+  auto height = 40;
+  gainSlider.setBounds(area.removeFromTop(height));
 }
