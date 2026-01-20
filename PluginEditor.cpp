@@ -13,8 +13,12 @@ AudioPluginAudioProcessorEditor::AudioPluginAudioProcessorEditor (AudioPluginAud
      attachment.push_back(
       std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(
           processorRef.apvts, "gain", gainSlider));
+     attachment.push_back(
+      std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(
+          processorRef.apvts, "freq", freqSlider));
     
-           addAndMakeVisible(gainSlider);
+    addAndMakeVisible(gainSlider);
+    addAndMakeVisible(freqSlider);
 }
 
 AudioPluginAudioProcessorEditor::~AudioPluginAudioProcessorEditor()
@@ -40,4 +44,5 @@ void AudioPluginAudioProcessorEditor::resized()
   auto area = getLocalBounds();
   auto height = 40;
   gainSlider.setBounds(area.removeFromTop(height));
+  freqSlider.setBounds(area.removeFromTop(height));
 }

@@ -19,6 +19,7 @@ private:
     AudioPluginAudioProcessor& processorRef;
 
      juce::Slider gainSlider;
+     juce::Slider freqSlider;
      
      std::vector<
       std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment>>
