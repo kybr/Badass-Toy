@@ -2,9 +2,6 @@
     
     namespace ky {
 
-Phasor::Phasor(float hertz, float sampleRate, float offset)
-      : frequency_(hertz / sampleRate), offset_(offset), phase_(0) {}
-
 float Phasor::operator()() {
     return process();
 }

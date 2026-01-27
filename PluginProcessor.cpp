@@ -2,7 +2,7 @@
 #include "PluginEditor.h"
 #include "ky.h"
 
-ky::Phasor phasor(440.0f, 44100.0f);
+ky::Phasor phasor;
 
 juce::AudioProcessorValueTreeState::ParameterLayout parameters() {
   std::vector<std::unique_ptr<juce::RangedAudioParameter>> parameter_list;
@@ -109,6 +109,8 @@ void AudioPluginAudioProcessor::prepareToPlay (double sampleRate, int samplesPer
     // Use this method as the place to do any pre-playback
     // initialisation that you need..
     juce::ignoreUnused (sampleRate, samplesPerBlock);
+
+    delayLine.resize(100000);
 }
 
 void AudioPluginAudioProcessor::releaseResources()
@@ -181,7 +183,11 @@ void AudioPluginAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer,
 
     float b[buffer.getNumSamples()]; // allocate array
     for (int sample = 0; sample < buffer.getNumSamples(); ++sample) {
-        b[sample] = q() * g;
+        static ky::Phasor env;
+        env.frequency(1.0f / 0.5f, static_cast<float>(getSampleRate())); // 0.5 second period
+        float s = q() * g * (1 - env());
+        delayLine.write(s + 0.7 * delayLine.read(getSampleRate() * 0.3f));
+        b[sample] = s + delayLine.read(getSampleRate() * 0.7f);
     }
 
     for (int channel = 0; channel < totalNumInputChannels; ++channel)

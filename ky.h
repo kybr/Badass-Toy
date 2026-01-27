@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cmath>
+#include <vector>
 
 namespace ky {
 
@@ -46,12 +47,11 @@ inline float sin7(float x) {
 
 // functor class
 class Phasor {
-  float frequency_; // normalized frequency
-  float offset_;
-  float phase_;
+  float frequency_ = 0; // normalized frequency
+  float offset_ = 0;
+  float phase_ = 0;
 
  public:
-  Phasor(float hertz, float sampleRate, float offset = 0);
   float operator()();
   void frequency(float hertz, float sampleRate);
   float process();
@@ -99,6 +99,60 @@ class QuasiSaw {
     out = out + DC;  // compensate DC offset
 
     return out * norm;
+  }
+};
+
+
+class ArrayFloat : public std::vector<float> {
+  public:
+  float lookup(float index) { 
+    int to_the_left = (int)index;
+    int to_the_right = (to_the_left == (size() - 1)) ? 0 : to_the_left + 1;
+    float t = index - (float)to_the_left;
+    return operator[](to_the_left) * (1 - t) + t * operator[](to_the_right);
+  }
+};
+
+// std::array<type, number> ... on the stack
+// std::vector<type> ... allocates memory on the heap
+
+class TableSine {
+  ArrayFloat table;
+  Phasor phasor;
+
+  public:
+  TableSine() {
+    table.resize(4096);
+    for (size_t i = 0; i < table.size(); ++i) {
+      table[i] = sinf((2.0f * M_PI * i) / table.size());
+    }
+  }
+
+  void frequency(float hertz, float sampleRate) {
+    phasor.frequency(hertz, sampleRate);
+  }
+
+  float operator()() {
+    float phase = phasor();
+    return table.lookup(phase * table.size());
+  }
+};
+
+class DelayLine : public ArrayFloat {
+  size_t index = 0;
+  public:
+
+  void write(float value) {
+    operator[](index) = value;
+    index = (index + 1) % size();
+  }
+
+  float read(float samples_ago) {
+    float readIndex = (float)index - samples_ago;
+    if (readIndex < 0) {
+      readIndex += (float)size();
+    }
+    return lookup(readIndex);
   }
 };
 
