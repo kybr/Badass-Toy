@@ -57,4 +57,50 @@ class Phasor {
   float process();
 };
 
+class QuasiSaw {
+  // variables and constants
+  float osc = 0;      // output of the saw oscillator
+  float phase = 0;    // phase accumulator
+  float w = 0;        // normalized frequency
+  float scaling = 0;  // scaling amount
+  float DC = 0;       // DC compensation
+  float norm = 0;              // normalization amount
+  float const a0 = 2.5f;   // precalculated coeffs
+  float const a1 = -1.5f;  // for HF compensation
+  float in_hist = 0;           // delay for the HF filter
+
+  float t = 0;
+
+ public:
+  void frequency(float hertz, float samplerate) {
+    // calculate w and scaling
+    w = hertz / samplerate;  // normalized frequency
+    float n = 0.5f - w;
+    scaling = 13.0f * n * n * n * n;  // calculate scaling
+    DC = 0.376f - w * 0.752f;         // calculate DC compensation
+    norm = 1.0f - 2.0f * w;  // calculate normalization
+  }
+
+  void virtualfilter(float t_) { t = t_; }
+
+  float operator()() {
+    // increment accumulator
+    phase += 2.0f * w;
+    if (phase >= 1.0f) {
+      phase -= 2.0f;
+    }
+
+    // calculate next sample
+    osc = (osc + sin(2 * M_PI * (phase + osc * scaling * t))) * 0.5f;
+
+    // compensate HF rolloff
+    float out = a0 * osc + a1 * in_hist;
+    in_hist = osc;
+    out = out + DC;  // compensate DC offset
+
+    return out * norm;
+  }
+};
+
+
 } // namespace ky
