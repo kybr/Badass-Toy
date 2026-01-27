@@ -13,6 +13,9 @@ juce::AudioProcessorValueTreeState::ParameterLayout parameters() {
   parameter_list.push_back(std::make_unique<juce::AudioParameterFloat>(
       juce::ParameterID{"freq", 1}, "MIDI", 36.0, 96.0, 60.0));
 
+  parameter_list.push_back(std::make_unique<juce::AudioParameterFloat>(
+      juce::ParameterID{"vfilt", 1}, "Virtual Filter", 0.0, 1.0, 0.45));
+
   return {parameter_list.begin(), parameter_list.end()};
 }
 
@@ -167,16 +170,18 @@ void AudioPluginAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer,
     // XXX not thread-safe; should cache the atomic float and only call load in the audio thread
     float g = apvts.getParameter("gain")->getValue();
     float f = apvts.getParameter("freq")->getValue();
+    float t = apvts.getParameter("vfilt")->getValue();
     
     // 0.0 to 1.0
     g = ky::dbtoa(ky::map(g, 0.0f, 1.0f, -60.0f, 0.0f)); // -60 dB to 0 dB
     f = ky::mtof(ky::map(f, 0.0f, 1.0f, 36.0f, 96.0f)); // MIDI 36 to 96
 
-    phasor.frequency(f, getSampleRate());
+    q.frequency(f, static_cast<float>(getSampleRate()));
+    q.virtualfilter(t);
 
     float b[buffer.getNumSamples()]; // allocate array
     for (int sample = 0; sample < buffer.getNumSamples(); ++sample) {
-        b[sample] = ky::sin7(phasor()) * g;
+        b[sample] = q() * g;
     }
 
     for (int channel = 0; channel < totalNumInputChannels; ++channel)

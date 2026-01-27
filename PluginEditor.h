@@ -20,6 +20,7 @@ private:
 
      juce::Slider gainSlider;
      juce::Slider freqSlider;
+     juce::Slider vfiltSlider;
      
      std::vector<
       std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment>>
