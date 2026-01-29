@@ -37,6 +37,27 @@ inline F wrap(F value, F high = 1, F low = 0) {
   }
   return value;
 }
+// modf(...)
+// fmod(...)
+template <typename F>
+inline F wrap_fmod(F value, F high = 1, F low = 0) {
+  return low + fmod(value - low, high - low);
+}
+// wrap_fmod<float>(4.2);
+// wrap_fmod(4.2); // make `double wrap_fmod(double value ...)`
+
+class ArrayFloat : public std::vector<float> {
+  public:
+  float lookup(float index) { 
+    int to_the_left = (int)index;
+    int to_the_right = (to_the_left == (size() - 1)) ? 0 : to_the_left + 1;
+    float t = index - (float)to_the_left;
+    return operator[](to_the_left) * (1 - t) + t * operator[](to_the_right);
+  }
+  float phasor(float t) { 
+    return lookup(size() * t);
+  }
+};
 
 /// (0, 1)
 inline float sin7(float x) {
@@ -45,10 +66,26 @@ inline float sin7(float x) {
     return x * (x * (x * (x * (x * (x * (66.5723768716453 * x - 233.003319050759) + 275.754490892928) - 106.877929605423) + 0.156842000875713) - 9.85899292126983) + 7.25653181200263) - 8.88178419700125e-16;
 }
 
+inline float sint(float t) {
+  struct TableSine : ArrayFloat {
+    TableSine() {
+      resize(4096);
+      for (size_t i = 0; i < size(); ++i) {
+        at(i) = static_cast<float>(sin((2.0 * M_PI * i) / static_cast<double>(size())));
+        //printf("%f\n", at(i));
+      }
+    }
+  };
+  static TableSine table;
+  return table.phasor(t);
+}
+
 // functor class
 class Phasor {
   float frequency_ = 0; // normalized frequency
   float offset_ = 0;
+
+ protected:
   float phase_ = 0;
 
  public:
@@ -103,38 +140,13 @@ class QuasiSaw {
 };
 
 
-class ArrayFloat : public std::vector<float> {
-  public:
-  float lookup(float index) { 
-    int to_the_left = (int)index;
-    int to_the_right = (to_the_left == (size() - 1)) ? 0 : to_the_left + 1;
-    float t = index - (float)to_the_left;
-    return operator[](to_the_left) * (1 - t) + t * operator[](to_the_right);
-  }
-};
-
 // std::array<type, number> ... on the stack
 // std::vector<type> ... allocates memory on the heap
 
-class TableSine {
-  ArrayFloat table;
-  Phasor phasor;
-
-  public:
-  TableSine() {
-    table.resize(4096);
-    for (size_t i = 0; i < table.size(); ++i) {
-      table[i] = sinf((2.0f * M_PI * i) / table.size());
-    }
-  }
-
-  void frequency(float hertz, float sampleRate) {
-    phasor.frequency(hertz, sampleRate);
-  }
-
+struct Cycle : public Phasor {
   float operator()() {
-    float phase = phasor();
-    return table.lookup(phase * table.size());
+    float v = Phasor::operator()();
+    return sint(v);
   }
 };
 

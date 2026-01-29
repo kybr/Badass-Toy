@@ -181,13 +181,17 @@ void AudioPluginAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer,
     q.frequency(f, static_cast<float>(getSampleRate()));
     q.virtualfilter(t);
 
+    c.frequency(f, static_cast<float>(getSampleRate()));
+
     float b[buffer.getNumSamples()]; // allocate array
     for (int sample = 0; sample < buffer.getNumSamples(); ++sample) {
-        static ky::Phasor env;
-        env.frequency(1.0f / 0.5f, static_cast<float>(getSampleRate())); // 0.5 second period
-        float s = q() * g * (1 - env());
-        delayLine.write(s + 0.7 * delayLine.read(getSampleRate() * 0.3f));
-        b[sample] = s + delayLine.read(getSampleRate() * 0.7f);
+        // static ky::Phasor env;
+        // env.frequency(1.0f / 0.5f, static_cast<float>(getSampleRate())); // 0.5 second period
+        // float s = q() * g * (1 - env());
+        // delayLine.write(s + 0.7 * delayLine.read(getSampleRate() * 0.3f));
+        // b[sample] = s + delayLine.read(getSampleRate() * 0.7f);
+
+        b[sample] = c();
     }
 
     for (int channel = 0; channel < totalNumInputChannels; ++channel)

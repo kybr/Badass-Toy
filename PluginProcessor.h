@@ -47,6 +47,7 @@ public:
   juce::AudioProcessorValueTreeState apvts;
 
    ky::QuasiSaw q;
+   ky::Cycle c;
    ky::DelayLine delayLine;
 private:
     //==============================================================================
