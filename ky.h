@@ -6,7 +6,15 @@
 
 namespace ky {
 
+///////////////////////////////////////////////////////////////////////////////
+//// Constants ////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////
+
 constexpr float tau = std::numbers::pi_v<float> * 2.0f;
+
+///////////////////////////////////////////////////////////////////////////////
+//// Functions ////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////
 
 inline float map(float value, float low, float high, float Low, float High) {
   return Low + (High - Low) * ((value - low) / (high - low));
@@ -47,6 +55,33 @@ inline F wrap_fmod(F value, F high = 1, F low = 0) {
   return low + fmod(value - low, high - low);
 }
 
+///////////////////////////////////////////////////////////////////////////////
+//// Support Classes //////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////
+
+// 1-sample delay
+class History {
+  float value = 0;
+
+  public:
+  float operator()() { return value; }
+  float operator()(float v) {
+    float tmp = value;
+    value = v;
+    return tmp;
+  }
+};
+
+// Takes the derivative of a signal
+// the backward difference
+class Delta {
+  History history;
+
+  public:
+  float operator()(float f) {
+    return f - history(f);
+  }
+};
 class ArrayFloat : public std::vector<float> {
   public:
   float lookup(float index) { 
@@ -59,6 +94,10 @@ class ArrayFloat : public std::vector<float> {
     return lookup(size() * t);
   }
 };
+
+///////////////////////////////////////////////////////////////////////////////
+//// Sines ////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////
 
 /// (0, 1)
 inline float sin7(float x) {
@@ -81,6 +120,10 @@ inline float sint(float t) {
   return table.phasor(t);
 }
 
+///////////////////////////////////////////////////////////////////////////////
+//// Oscillators //////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////
+
 // functor class
 class Phasor {
   float increment = 0; // normalized frequency
@@ -101,6 +144,28 @@ class Phasor {
     increment = hertz / sampleRate;
   }
 };
+
+// Fires at a given frequency...
+class Timer {
+  float increment = 0;
+  float value = 0;
+
+  public:
+  bool operator()() {
+    if (value >= 1.0f) {
+      value -= 1.0f;
+      return true;
+    }
+    value += increment;
+    return false;
+  }
+
+  void frequency(float hertz, float sampleRate) {
+    increment = hertz / sampleRate;
+  }
+};
+
+// Quasi-Bandlimited Frequency Modulation
 
 class QuasiSaw {
   // variables and constants
@@ -147,15 +212,15 @@ class QuasiSaw {
   }
 };
 
-
-// std::array<type, number> ... on the stack
-// std::vector<type> ... allocates memory on the heap
-
 struct Cycle : public Phasor {
   float operator()() {
     return sint(Phasor::operator()());
   }
 };
+
+///////////////////////////////////////////////////////////////////////////////
+//// Delay ////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////
 
 class DelayLine : public ArrayFloat {
   size_t index = 0;
@@ -175,5 +240,59 @@ class DelayLine : public ArrayFloat {
   }
 };
 
+///////////////////////////////////////////////////////////////////////////////
+//// Filters //////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////
+
+// Average this input sample with the last input sample
+class TwoSampleMean {
+  History history;
+
+  public:
+  float operator()(float f) {
+    return (f + history(f)) / 2.0f;
+  }
+};
+
+// Another simple low-pass filter
+class OnePole {
+  float b0 = 1, a1 = 0, yn1 = 0;
+
+  public:
+  void frequency(float hertz, float samplerate) {
+    a1 = exp(-tau * hertz / samplerate);
+    b0 = 1.0f - a1;
+  }
+  float operator()(float xn) { return yn1 = b0 * xn + a1 * yn1; }
+};
+
+// Also a low-pass filter, but non-linear
+class SlewRateLimit {
+  float limit = 0;
+  float value = 0;
+  public:
+  void configure(float v, float r, float samplerate) {
+    value = v;
+    limit = r / samplerate;
+  }
+  void slewrate(float r, float samplerate) {
+    limit = r / samplerate;
+  }
+  float operator()(float f) {
+    float v = value;
+
+    // side effect....
+    float delta = f - value;
+    if (delta > limit) {
+      delta = limit;
+    }
+    else if (delta < -limit) {
+      delta = -limit;
+    }
+    value += delta;
+
+    return v;
+  }
+};
 
 } // namespace ky
