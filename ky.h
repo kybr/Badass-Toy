@@ -37,14 +37,12 @@ inline F wrap(F value, F high = 1, F low = 0) {
   }
   return value;
 }
-// modf(...)
-// fmod(...)
+
+// XXX is this faster than wrap (above)?
 template <typename F>
 inline F wrap_fmod(F value, F high = 1, F low = 0) {
   return low + fmod(value - low, high - low);
 }
-// wrap_fmod<float>(4.2);
-// wrap_fmod(4.2); // make `double wrap_fmod(double value ...)`
 
 class ArrayFloat : public std::vector<float> {
   public:
@@ -84,8 +82,6 @@ inline float sint(float t) {
 class Phasor {
   float frequency_ = 0; // normalized frequency
   float offset_ = 0;
-
- protected:
   float phase_ = 0;
 
  public:
@@ -145,8 +141,7 @@ class QuasiSaw {
 
 struct Cycle : public Phasor {
   float operator()() {
-    float v = Phasor::operator()();
-    return sint(v);
+    return sint(Phasor::operator()());
   }
 };
 
