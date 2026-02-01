@@ -2,8 +2,11 @@
 
 #include <cmath>
 #include <vector>
+#include <numbers>
 
 namespace ky {
+
+constexpr float tau = std::numbers::pi_v<float> * 2.0f;
 
 inline float map(float value, float low, float high, float Low, float High) {
   return Low + (High - Low) * ((value - low) / (high - low));
@@ -47,10 +50,10 @@ inline F wrap_fmod(F value, F high = 1, F low = 0) {
 class ArrayFloat : public std::vector<float> {
   public:
   float lookup(float index) { 
-    int to_the_left = (int)index;
-    int to_the_right = (to_the_left == (size() - 1)) ? 0 : to_the_left + 1;
+    size_t to_the_left = static_cast<size_t>(std::floor(index));
+    size_t to_the_right = (to_the_left == (size() - 1u)) ? 0u : to_the_left + 1u;
     float t = index - (float)to_the_left;
-    return operator[](to_the_left) * (1 - t) + t * operator[](to_the_right);
+    return lerp(operator[](to_the_left), operator[](to_the_right), t);
   }
   float phasor(float t) { 
     return lookup(size() * t);
@@ -61,7 +64,7 @@ class ArrayFloat : public std::vector<float> {
 inline float sin7(float x) {
     // 7 multiplies + 7 addition/subtraction
     // 14 operations
-    return x * (x * (x * (x * (x * (x * (66.5723768716453 * x - 233.003319050759) + 275.754490892928) - 106.877929605423) + 0.156842000875713) - 9.85899292126983) + 7.25653181200263) - 8.88178419700125e-16;
+    return x * (x * (x * (x * (x * (x * (66.5723768716453f * x - 233.003319050759f) + 275.754490892928f) - 106.877929605423f) + 0.156842000875713f) - 9.85899292126983f) + 7.25653181200263f) - 8.88178419700125e-16f;
 }
 
 inline float sint(float t) {
@@ -124,7 +127,7 @@ class QuasiSaw {
     }
 
     // calculate next sample
-    osc = (osc + sin(2 * M_PI * (phase + osc * scaling * t))) * 0.5f;
+    osc = (osc + std::sin(tau * (phase + osc * scaling * t))) * 0.5f;
 
     // compensate HF rolloff
     float out = a0 * osc + a1 * in_hist;
