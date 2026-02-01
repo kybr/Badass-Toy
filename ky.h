@@ -83,14 +83,23 @@ inline float sint(float t) {
 
 // functor class
 class Phasor {
-  float frequency_ = 0; // normalized frequency
-  float offset_ = 0;
-  float phase_ = 0;
+  float increment = 0; // normalized frequency
+  float value = 0;
 
  public:
-  float operator()();
-  void frequency(float hertz, float sampleRate);
-  float process();
+
+  float operator()() {
+    float v = value; // remember value
+    value += increment; // "side effect"
+    if (value >= 1.0f) {
+      value -= 1.0f; // wrap phase
+    }
+    return v;
+  }
+
+  void frequency(float hertz, float sampleRate) {
+    increment = hertz / sampleRate;
+  }
 };
 
 class QuasiSaw {
