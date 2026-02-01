@@ -55,6 +55,17 @@ inline F wrap_fmod(F value, F high = 1, F low = 0) {
   return low + fmod(value - low, high - low);
 }
 
+// XXX we will improve this later...
+float uniform() {
+  // from the FAUST:
+  // rand  = +(12345)~*(1103515245);
+  // w   = rand/2147483647.0;
+  static int history = 0;
+  history *= 1103515245;
+  history += 12345;
+  return history / 2147483647.0;
+}
+
 ///////////////////////////////////////////////////////////////////////////////
 //// Support Classes //////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////
