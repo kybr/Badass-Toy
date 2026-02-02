@@ -56,7 +56,7 @@ inline F wrap_fmod(F value, F high = 1, F low = 0) {
 }
 
 // XXX we will improve this later...
-float uniform() {
+static float uniform() {
   // from the FAUST:
   // rand  = +(12345)~*(1103515245);
   // w   = rand/2147483647.0;
@@ -95,10 +95,10 @@ class Delta {
 };
 class ArrayFloat : public std::vector<float> {
   public:
-  float lookup(float index) { 
-    size_t to_the_left = static_cast<size_t>(std::floor(index));
+  float lookup(float samples) { 
+    size_t to_the_left = static_cast<size_t>(std::floor(samples));
     size_t to_the_right = (to_the_left == (size() - 1u)) ? 0u : to_the_left + 1u;
-    float t = index - (float)to_the_left;
+    float t = samples - (float)to_the_left;
     return lerp(operator[](to_the_left), operator[](to_the_right), t);
   }
   float phasor(float t) { 
@@ -235,6 +235,7 @@ struct Cycle : public Phasor {
 
 class DelayLine : public ArrayFloat {
   size_t index = 0;
+
   public:
 
   void write(float value) {
