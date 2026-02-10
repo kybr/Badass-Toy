@@ -1,15 +1,48 @@
 #include "ky.h"
 
-int main() {
-  // ky::Cycle c;
-  // c.frequency(440, 48000);
-  // for (int i = 0; i < 100000; i++) {
-  //     c();
-  //   //printf("%lf\n", c() * 0.5);
-  // }
+#include <chrono>
 
-  for (int i = 0; i < 100000; i++) {
-    printf("%lf\n", ky::sint((float)i / 100000));
-    //printf("%lf\n", sinf((2.0f * M_PI * i) / 100000));
+template <typename T> void say(const char* prefix, T start, T end) {
+  printf("%s: %lf\n", prefix, std::chrono::duration_cast<std::chrono::microseconds>(end - start).count() / 1000000.0);
+}
+
+int main() {
+
+  // stack allocation does not work
+  //ky::Cycle cycle[1000000000];
+
+  const int N = 1000000000;
+
+  auto start = std::chrono::high_resolution_clock::now();
+  printf("starting...\n");
+
+  ky::Cycle* cycle = new ky::Cycle[N]; // use HEAP allocation
+
+  auto allocated = std::chrono::high_resolution_clock::now();
+  say("allocated", start, allocated);
+
+  printf("%lu\n", sizeof(cycle));
+
+  auto printed = std::chrono::high_resolution_clock::now();
+  say("printed", allocated, printed);
+
+  for (int j = 0; j < N; j++) {
+    cycle[j].frequency(1000 + 100 * ky::uniform(), 48000);
   }
+
+  auto initialized = std::chrono::high_resolution_clock::now();
+  say("initialized", printed, initialized);
+
+  std::vector<float> buffer;
+  for (int i = 0; i < 10; i++) {
+    float s = 0;
+    for (int j = 0; j < N; j++) {
+      s += cycle[j]();
+    }
+    buffer.push_back(s);
+  }
+
+  auto done = std::chrono::high_resolution_clock::now();
+  say("done", initialized, done);
+  say("total", start, done);
 }
