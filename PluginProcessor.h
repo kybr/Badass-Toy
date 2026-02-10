@@ -49,6 +49,8 @@ public:
    ky::QuasiSaw q;
    ky::Cycle c;
    ky::DelayLine delayLine;
+   ky::PluckedString string;
+   ky::Timer timer;
 private:
     //==============================================================================
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (AudioPluginAudioProcessor)

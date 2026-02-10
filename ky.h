@@ -307,4 +307,68 @@ class SlewRateLimit {
   }
 };
 
+
+///////////////////////////////////////////////////////////////////////////////
+//// Synths ///////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////
+
+class PluckedString : public DelayLine {
+  TwoSampleMean filter;
+
+  float gain = 1;
+  float t60 = 1;
+  float delayTime = 1;  // in seconds
+
+  public:
+
+  void frequency(float hertz) { period(1 / hertz); }
+  void period(float seconds) {
+    delayTime = seconds;
+    recalculate();
+  }
+
+  void decayTime(float _t60) {
+    t60 = _t60;
+    recalculate();
+  }
+
+  void set(float frequency, float decayTime) {
+    delayTime = 1 / frequency;
+    t60 = decayTime;
+    recalculate();
+  }
+
+  // given t60 and frequency (seconds and Hertz), calculate the gain...
+  //
+  // for a given frequency, our algorithm applies *gain* frequency-many
+  // times per second. given a t60 time we can calculate how many times (n)
+  // gain will be applied in those t60 seconds. we want to reduce the signal
+  // by 60dB over t60 seconds or over n-many applications. this means that
+  // we want gain to be a number that, when multiplied by itself n times,
+  // becomes 60 dB quieter than it began.
+  //
+  void recalculate() {
+    int n = t60 / delayTime;
+    gain = pow(dbtoa(-60), 1.0f / n);
+    //printf("t:%f\tf:%f\tn:%d\tg:%f\n", t60, 1 / delayTime, n, gain);
+    //fflush(stdout);
+  }
+
+  float operator()() {
+    float v = filter(read(48000 * delayTime)) * gain;
+    write(v);
+    return v;
+  }
+
+  void pluck(float gain = 1) {
+    // put noise in the last N sample memory positions. N depends on
+    // frequency
+    //
+    int n = int(ceil(delayTime * 48000));
+    for (int i = 0; i < n; ++i) {
+      write(uniform() * gain);
+    }
+  }
+};
+
 } // namespace ky

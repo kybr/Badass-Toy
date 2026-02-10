@@ -101,7 +101,7 @@ void AudioPluginAudioProcessor::changeProgramName (int index, const juce::String
     juce::ignoreUnused (index, newName);
 }
 
-//==============================================================================
+//=============================================================================
 void AudioPluginAudioProcessor::prepareToPlay (double sampleRate, int samplesPerBlock)
 {
     // Use this method as the place to do any pre-playback
@@ -109,6 +109,9 @@ void AudioPluginAudioProcessor::prepareToPlay (double sampleRate, int samplesPer
     juce::ignoreUnused (sampleRate, samplesPerBlock);
 
     delayLine.resize(100000);
+
+    timer.frequency(2.1, 48000);
+    string.resize(48000, 0);
 }
 
 void AudioPluginAudioProcessor::releaseResources()
@@ -177,7 +180,15 @@ void AudioPluginAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer,
         // delayLine.write(s + 0.7 * delayLine.read(getSampleRate() * 0.3f));
         // b[sample] = s + delayLine.read(getSampleRate() * 0.7f);
 
-        b[sample] = c();
+        //b[sample] = c();
+        if (timer()) {
+            string.set(
+                ky::map(ky::uniform(), -1, 1, 200, 2000),
+                ky::map(ky::uniform(), -1, 1, 0.1, 0.9));
+            string.pluck();
+        }
+        b[sample] = string();
+
     }
 
     for (int channel = 0; channel < totalNumInputChannels; ++channel)
